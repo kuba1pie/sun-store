@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { Product } from '~/types/product'
-import Papa from 'papaparse'
+import { useProductsStore } from '~/composables/products'
 
 const route = useRoute<'category-id'>()
 const productsStore = useProductsStore()
@@ -9,26 +9,21 @@ definePageMeta({
   layout: 'home',
 })
 
-// Proper SSR/SSG with caching and hydration
-const { data: productsData } = await useAsyncData('products', async () => {
-  const response = await $fetch<string>('/products.csv', { responseType: 'text' })
-  const result = Papa.parse<Product>(response, {
-    header: true,
-    dynamicTyping: true,
-    skipEmptyLines: true,
-  })
-  return result.data as Product[]
+// SSR/SSG-safe fetch via server API; hydration-friendly
+const { data: productsData, pending, error } = await useAsyncData<Product[]>('products', () => $fetch<Product[]>('/api/products'))
+
+watchEffect(() => {
+  if (productsData.value)
+    productsStore.setProducts(productsData.value)
 })
 
-// Initialize store with fetched data
-if (productsData.value) {
-  productsStore.products = productsData.value
-}
+const isLoading = computed(() => pending.value || productsStore.loading)
+const loadError = computed(() => productsStore.error || (error.value && (error.value as Error).message))
 
 // Filter products by category
-const categoryProducts = computed(() => {
-  return productsStore.products.filter(p => p.category === route.params.id)
-})
+const categoryProducts = computed(() =>
+  productsStore.products.filter((p: Product) => p.category === route.params.id),
+)
 </script>
 
 <template>
@@ -55,11 +50,11 @@ const categoryProducts = computed(() => {
           />
         </aside>
         <main>
-          <div v-if="productsStore.loading">
+          <div v-if="isLoading">
             Loading products...
           </div>
-          <div v-else-if="productsStore.error" text-red>
-            {{ productsStore.error }}
+          <div v-else-if="loadError" text-red>
+            {{ loadError }}
           </div>
           <div v-else-if="categoryProducts.length === 0" text-gray>
             No products found in this category.

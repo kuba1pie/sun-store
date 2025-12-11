@@ -1,6 +1,7 @@
 import type { Product, ProductFilters } from '~/types/product'
-import Papa from 'papaparse'
-import { acceptHMRUpdate, defineStore } from 'pinia'
+import { $fetch } from 'ofetch'
+import { defineStore } from 'pinia'
+import { computed, ref } from 'vue'
 
 export const useProductsStore = defineStore('products', () => {
   const products = ref<Product[]>([])
@@ -70,23 +71,17 @@ export const useProductsStore = defineStore('products', () => {
     }
   })
 
-  async function loadProducts() {
+  function setProducts(payload: Product[]) {
+    products.value = payload
+  }
+
+  async function fetchProducts() {
     loading.value = true
     error.value = null
 
     try {
-      // Use absolute URL for SSR compatibility
-      const baseURL = import.meta.server ? 'http://localhost:3000' : ''
-      const response = await fetch(`${baseURL}/products.csv`)
-      const csvText = await response.text()
-
-      const result = Papa.parse<Product>(csvText, {
-        header: true,
-        dynamicTyping: true,
-        skipEmptyLines: true,
-      })
-
-      products.value = result.data as Product[]
+      const data = await $fetch<Product[]>('/api/products')
+      products.value = data
     }
     catch (e) {
       error.value = e instanceof Error ? e.message : 'Failed to load products'
@@ -94,7 +89,6 @@ export const useProductsStore = defineStore('products', () => {
     }
     finally {
       loading.value = false
-
     }
   }
 
@@ -107,9 +101,7 @@ export const useProductsStore = defineStore('products', () => {
     manufacturers,
     priceRange,
     filteredProducts,
-    loadProducts,
+    setProducts,
+    fetchProducts,
   }
 })
-
-if (import.meta.hot)
-  import.meta.hot.accept(acceptHMRUpdate(useProductsStore, import.meta.hot))
