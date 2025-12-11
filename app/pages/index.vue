@@ -8,6 +8,42 @@ definePageMeta({
 
 const online = useOnline()
 const productsStore = useProductsStore()
+const route = useRoute()
+const router = useRouter()
+
+function syncFromQuery() {
+  const queryPage = Number(route.query.page ?? '')
+  const queryLimit = Number(route.query.limit ?? '')
+
+  if (!Number.isNaN(queryLimit)) {
+    const matchedSize = productsStore.pageSizeOptions.find(size => size === queryLimit)
+    if (matchedSize)
+      productsStore.setPageSize(matchedSize)
+  }
+
+  if (!Number.isNaN(queryPage) && queryPage > 0) {
+    productsStore.setPage(queryPage)
+  }
+}
+
+function updateQuery(page = productsStore.currentPage, limit = productsStore.pageSize) {
+  router.replace({ query: { ...route.query, page: String(page), limit: String(limit) } })
+}
+
+function handlePageSizeChange(size: number) {
+  const matchedSize = productsStore.pageSizeOptions.find(option => option === size)
+  if (!matchedSize)
+    return
+
+  productsStore.setPageSize(matchedSize)
+  productsStore.setPage(1)
+  updateQuery(1, matchedSize)
+}
+
+function handlePageChange(page: number) {
+  productsStore.setPage(page)
+  updateQuery(productsStore.currentPage, productsStore.pageSize)
+}
 
 // SSR/SSG-safe fetch via server API; hydration-friendly
 const { data: productsData, pending, error } = await useAsyncData<Product[]>('products', () => $fetch<Product[]>('/api/products'))
@@ -19,6 +55,14 @@ watchEffect(() => {
 
 const isLoading = computed(() => pending.value || productsStore.loading)
 const loadError = computed(() => productsStore.error || (error.value && (error.value as Error).message))
+
+watch(
+  () => route.query,
+  () => {
+    syncFromQuery()
+  },
+  { immediate: true, deep: true },
+)
 </script>
 
 <template>
@@ -64,8 +108,8 @@ const loadError = computed(() => productsStore.error || (error.value && (error.v
             :current-page="productsStore.currentPage"
             :total-pages="productsStore.totalPages"
             :loading="isLoading"
-            @update:page-size="productsStore.setPageSize"
-            @update:page="productsStore.setPage"
+            @update:page-size="handlePageSizeChange"
+            @update:page="handlePageChange"
           />
 
           <div v-if="isLoading">
