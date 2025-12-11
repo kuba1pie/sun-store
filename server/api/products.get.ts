@@ -1,6 +1,7 @@
 import type { Product } from '~/types/product'
 import { promises as fs } from 'node:fs'
 import { resolve } from 'node:path'
+import { cwd } from 'node:process'
 import { defineEventHandler } from 'h3'
 import Papa from 'papaparse'
 
@@ -13,7 +14,7 @@ export default defineEventHandler(async () => {
   if (cachedProducts && now - cachedAt < CACHE_TTL_MS)
     return cachedProducts
 
-  const csvPath = resolve(process.cwd(), 'public', 'products.csv')
+  const csvPath = resolve(cwd(), 'public', 'products.csv')
   const csvText = await fs.readFile(csvPath, 'utf-8')
 
   const result = Papa.parse<Product>(csvText, {

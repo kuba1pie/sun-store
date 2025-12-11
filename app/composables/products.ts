@@ -140,3 +140,5 @@ export const useProductsStore = defineStore('products', () => {
     fetchProducts,
   }
 })
+
+export type ReturnTypeStore = ReturnType<typeof useProductsStore>

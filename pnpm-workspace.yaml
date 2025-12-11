@@ -1,4 +1,7 @@
 packages: []
+catalog:
+  '@types/papaparse': ^5.5.1
+  papaparse: ^5.5.3
 catalogs:
   build:
     '@nuxt/devtools': ^3.0.0-beta.2
@@ -31,6 +34,3 @@ onlyBuiltDependencies:
   - '@parcel/watcher'
   - esbuild
   - unrs-resolver
-catalog:
-  '@types/papaparse': ^5.5.1
-  papaparse: ^5.5.3
