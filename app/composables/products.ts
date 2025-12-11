@@ -1,0 +1,115 @@
+import type { Product, ProductFilters } from '~/types/product'
+import Papa from 'papaparse'
+import { acceptHMRUpdate, defineStore } from 'pinia'
+
+export const useProductsStore = defineStore('products', () => {
+  const products = ref<Product[]>([])
+  const loading = ref(false)
+  const error = ref<string | null>(null)
+
+  const filters = ref<ProductFilters>({
+    category: null,
+    minPrice: null,
+    maxPrice: null,
+    manufacturer: null,
+    searchQuery: null,
+  })
+
+  // Computed: filtered products
+  const filteredProducts = computed(() => {
+    return products.value.filter((product: Product) => {
+      // Category filter
+      if (filters.value.category && product.category !== filters.value.category) {
+        return false
+      }
+
+      // Manufacturer filter
+      if (filters.value.manufacturer && product.manufacturer !== filters.value.manufacturer) {
+        return false
+      }
+
+      // Price range filter
+      if (filters.value.minPrice !== undefined && filters.value.minPrice !== null && product.price < filters.value.minPrice) {
+        return false
+      }
+      if (filters.value.maxPrice !== undefined && filters.value.maxPrice !== null && product.price > filters.value.maxPrice) {
+        return false
+      }
+
+      // Search query (name, manufacturer, or description)
+      if (filters.value.searchQuery) {
+        const query = filters.value.searchQuery.toLowerCase()
+        const searchableText = `${product.name} ${product.manufacturer} ${product.description}`.toLowerCase()
+        if (!searchableText.includes(query)) {
+          return false
+        }
+      }
+
+      return true
+    })
+  })
+
+  const categories = computed(() => {
+    const uniqueCategories = new Set(products.value.map(p => p.category))
+    return Array.from(uniqueCategories).sort()
+  })
+
+  const manufacturers = computed(() => {
+    const uniqueManufacturers = new Set(products.value.map(p => p.manufacturer))
+    return Array.from(uniqueManufacturers).sort()
+  })
+
+  const priceRange = computed(() => {
+    if (products.value.length === 0) {
+      return { min: 0, max: 0 }
+    }
+    const prices = products.value.map(p => p.price)
+    return {
+      min: Math.min(...prices),
+      max: Math.max(...prices),
+    }
+  })
+
+  async function loadProducts() {
+    loading.value = true
+    error.value = null
+
+    try {
+      // Use absolute URL for SSR compatibility
+      const baseURL = import.meta.server ? 'http://localhost:3000' : ''
+      const response = await fetch(`${baseURL}/products.csv`)
+      const csvText = await response.text()
+
+      const result = Papa.parse<Product>(csvText, {
+        header: true,
+        dynamicTyping: true,
+        skipEmptyLines: true,
+      })
+
+      products.value = result.data as Product[]
+    }
+    catch (e) {
+      error.value = e instanceof Error ? e.message : 'Failed to load products'
+      console.error('Error loading products:', e)
+    }
+    finally {
+      loading.value = false
+
+    }
+  }
+
+  return {
+    products,
+    loading,
+    error,
+    filters,
+    categories,
+    manufacturers,
+    priceRange,
+    filteredProducts,
+    loadProducts,
+  }
+})
+
+if (import.meta.hot)
+  import.meta.hot.accept(acceptHMRUpdate(useProductsStore, import.meta.hot))
