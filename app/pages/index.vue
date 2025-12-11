@@ -9,6 +9,11 @@ definePageMeta({
 const online = useOnline()
 const productsStore = useProductsStore()
 
+function handlePageSizeChange(event: Event) {
+  const value = Number((event.target as HTMLSelectElement).value) as (typeof productsStore.pageSizeOptions)[number]
+  productsStore.setPageSize(value)
+}
+
 // SSR/SSG-safe fetch via server API; hydration-friendly
 const { data: productsData, pending, error } = await useAsyncData<Product[]>('products', () => $fetch<Product[]>('/api/products'))
 
@@ -22,6 +27,7 @@ const loadError = computed(() => productsStore.error || (error.value && (error.v
 </script>
 
 <template>
+  <!-- eslint-disable unocss/order -->
   <div>
     <Logos mb-6 />
     <ClientOnly>
@@ -58,6 +64,46 @@ const loadError = computed(() => productsStore.error || (error.value && (error.v
           />
         </aside>
         <main>
+          <div class="flex gap-4 items-center justify-between mb-4">
+            <div class="flex gap-2 items-center text-sm">
+              <span>Show</span>
+              <select
+                class="select select-sm text-blue-600 border-blue-600"
+                :value="productsStore.pageSize"
+                @change="handlePageSizeChange"
+              >
+                <option
+                  v-for="size in productsStore.pageSizeOptions"
+                  :key="size"
+                  :value="size"
+                >
+                  {{ size }}
+                </option>
+              </select>
+              <span>per page</span>
+            </div>
+
+            <div class="flex gap-2 items-center text-sm">
+              <button
+                class="btn btn-xs bg-blue-600 hover:bg-blue-700 text-white"
+                :disabled="productsStore.currentPage <= 1"
+                @click="productsStore.setPage(productsStore.currentPage - 1)"
+              >
+                Prev
+              </button>
+              <span>
+                Page {{ productsStore.currentPage }} / {{ productsStore.totalPages }}
+              </span>
+              <button
+                class="btn btn-xs bg-blue-600 hover:bg-blue-700 text-white"
+                :disabled="productsStore.currentPage >= productsStore.totalPages"
+                @click="productsStore.setPage(productsStore.currentPage + 1)"
+              >
+                Next
+              </button>
+            </div>
+          </div>
+
           <div v-if="isLoading">
             Loading products...
           </div>
@@ -66,7 +112,7 @@ const loadError = computed(() => productsStore.error || (error.value && (error.v
           </div>
           <div v-else grid="~ cols-1 md:cols-2 lg:cols-3" gap-4>
             <ProductCard
-              v-for="(product, index) in productsStore.filteredProducts"
+              v-for="(product, index) in productsStore.paginatedProducts"
               :key="`${product.name}-${index}`"
               :product="product"
             />

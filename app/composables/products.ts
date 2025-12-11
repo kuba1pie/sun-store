@@ -1,12 +1,16 @@
 import type { Product, ProductFilters } from '~/types/product'
 import { $fetch } from 'ofetch'
 import { defineStore } from 'pinia'
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 
 export const useProductsStore = defineStore('products', () => {
   const products = ref<Product[]>([])
   const loading = ref(false)
   const error = ref<string | null>(null)
+
+  const pageSizeOptions = [9, 18, 27] as const
+  const pageSize = ref<number>(pageSizeOptions[0])
+  const currentPage = ref(1)
 
   const filters = ref<ProductFilters>({
     category: null,
@@ -50,6 +54,16 @@ export const useProductsStore = defineStore('products', () => {
     })
   })
 
+  const totalPages = computed(() => {
+    const total = Math.ceil(filteredProducts.value.length / pageSize.value) || 1
+    return Math.max(total, 1)
+  })
+
+  const paginatedProducts = computed(() => {
+    const start = (currentPage.value - 1) * pageSize.value
+    return filteredProducts.value.slice(start, start + pageSize.value)
+  })
+
   const categories = computed(() => {
     const uniqueCategories = new Set(products.value.map(p => p.category))
     return Array.from(uniqueCategories).sort()
@@ -74,6 +88,20 @@ export const useProductsStore = defineStore('products', () => {
   function setProducts(payload: Product[]) {
     products.value = payload
   }
+
+  function setPageSize(size: (typeof pageSizeOptions)[number]) {
+    if (!pageSizeOptions.includes(size))
+      return
+    pageSize.value = size
+  }
+
+  function setPage(page: number) {
+    currentPage.value = Math.min(Math.max(1, page), totalPages.value)
+  }
+
+  watch([filteredProducts, pageSize], () => {
+    currentPage.value = 1
+  })
 
   async function fetchProducts() {
     loading.value = true
@@ -101,7 +129,14 @@ export const useProductsStore = defineStore('products', () => {
     manufacturers,
     priceRange,
     filteredProducts,
+    paginatedProducts,
+    totalPages,
+    pageSize,
+    pageSizeOptions,
+    currentPage,
     setProducts,
+    setPageSize,
+    setPage,
     fetchProducts,
   }
 })
