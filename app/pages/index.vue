@@ -63,6 +63,17 @@ watch(
   },
   { immediate: true, deep: true },
 )
+
+// Reset page and sync URL when filters change and shrink/expand result set
+watch(
+  () => productsStore.filteredProducts.length,
+  (len, old) => {
+    if (len === old)
+      return
+    productsStore.setPage(1)
+    updateQuery(1, productsStore.pageSize)
+  },
+)
 </script>
 
 <template>
