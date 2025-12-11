@@ -30,6 +30,13 @@ catalogs:
     unocss:
       specifier: ^66.5.4
       version: 66.5.4
+  default:
+    '@types/papaparse':
+      specifier: ^5.5.1
+      version: 5.5.1
+    papaparse:
+      specifier: ^5.5.3
+      version: 5.5.3
   dev:
     '@antfu/eslint-config':
       specifier: ^6.1.0
@@ -76,7 +83,7 @@ importers:
   .:
     dependencies:
       papaparse:
-        specifier: ^5.5.3
+        specifier: 'catalog:'
         version: 5.5.3
     devDependencies:
       '@antfu/eslint-config':
@@ -101,7 +108,7 @@ importers:
         specifier: catalog:build
         version: 0.11.2(magicast@0.3.5)(pinia@3.0.3(typescript@5.9.3)(vue@3.5.22(typescript@5.9.3)))
       '@types/papaparse':
-        specifier: ^5.5.1
+        specifier: 'catalog:'
         version: 5.5.1
       '@unocss/eslint-config':
         specifier: catalog:build
